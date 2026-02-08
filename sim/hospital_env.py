@@ -48,6 +48,7 @@ class HospitalEnv:
             self.queue.append(self._spawn_patient())
     
     def _spawn_patient(self):
+        """spawn a new patient"""
         new_patient = Patient(
             pid=self.pid_counter,
             severity=(np.random.rand() * self.max_severity),
@@ -55,5 +56,21 @@ class HospitalEnv:
         )
         self.pid_counter += 1
         return new_patient
+
+    def _assign(self, doctor_idx, patient_idx):
+        """assigning a patient to a doctor"""
+        doctor = self.doctors[doctor_idx]
+        patient = self.queue[patient_idx]
+
+        # reassigning attr
+        doctor.busy = True
+        doctor.current_patient = patient
+        doctor.remaining_time = doctor.treatment_time
+        patient.state = "treating"
+
+        # pop them off the treatment queue
+        self.queue.pop(patient_idx)
+
+    
 
     
