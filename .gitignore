@@ -1,2 +1,11 @@
 /env
+/.venv
 /healthy_imgs
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.pytest_cache/
+*.log
+runs/
+checkpoints/
