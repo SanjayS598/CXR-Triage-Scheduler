@@ -46,3 +46,14 @@ class HospitalEnv:
         # init the initial patients already in line
         for _ in range(initial_numbers):
             self.queue.append(self._spawn_patient())
+    
+    def _spawn_patient(self):
+        new_patient = Patient(
+            pid=self.pid_counter,
+            severity=(np.random.rand() * self.max_severity),
+            arrival_time=self.curr_time
+        )
+        self.pid_counter += 1
+        return new_patient
+
+    
