@@ -1,0 +1,51 @@
+simulation:
+  shift_duration: 480
+  max_cases: 300
+  num_radiologists: 1
+  random_seed: 42
+
+arrivals:
+  base_lambda: 0.15
+  surge_enabled: true
+  surge_start: 120
+  surge_end: 240
+  surge_lambda: 0.35
+
+case_generation:
+  urgent_probability: 0.25
+  pred_urgency_noise_std: 0.15
+  uncertainty_enabled: true
+  uncertainty_mean: 0.3
+  uncertainty_std: 0.1
+
+read_times:
+  mean: 8.0
+  std: 2.0
+  min: 3.0
+  max: 20.0
+
+observation:
+  top_n_cases: 25
+  features_per_case: 3
+
+rewards:
+  weight_urgent: 5.0
+  weight_non_urgent: 1.0
+  sla_threshold: 15.0
+  sla_penalty: 50.0
+  fairness_threshold: 120.0
+  fairness_penalty: 10.0
+
+training:
+  total_timesteps: 100000
+  learning_rate: 0.0003
+  n_steps: 2048
+  batch_size: 64
+  n_epochs: 10
+  gamma: 0.99
+  gae_lambda: 0.95
+  clip_range: 0.2
+
+evaluation:
+  num_episodes: 50
+  eval_seeds: [100, 101, 102, 103, 104]
