@@ -46,7 +46,7 @@ class extractor():
             emb = pooled.view(1, -1)   # shape [1, 1024]
         return emb
 
-    def compute_unhealthy_score(self, img_path: str, metric: str = "cosine") -> float:
+    def compute_unhealthy_score(self, img_path: str, metric: str = "euclidean") -> float:
         img = self.process(img_path)
         embedding = self.compute_embedding(img)
 

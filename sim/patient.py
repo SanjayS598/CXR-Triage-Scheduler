@@ -25,7 +25,7 @@ class Patient:
         self.wait_time = 0
         self.state = "waiting" # waiting, active
 
-        if random.random() < 0.05:
+        if random.random() < 0.5:
             print("normal")
             self.xray_path = random.choice(NORMAL_PATHS)
         else:
