@@ -32,5 +32,5 @@ class Patient:
             print("abnormal")
             self.xray_path = random.choice(ABNORMAL_PATHS)
 
-        self.severity = XRAY_EXTRACTOR.compute_unhealthy_score(self.xray_path)
+        self.severity = XRAY_EXTRACTOR.compute_unhealthy_score(self.xray_path) * 10
         self.initial_severity = self.severity
