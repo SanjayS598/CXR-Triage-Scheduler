@@ -50,7 +50,6 @@ class HospitalGymEnv(gym.Env):
 
     @classmethod
     def from_yaml(cls, config_path: str) -> "HospitalGymEnv":
-        """Instantiate the env from a YAML config file."""
         with open(config_path, "r") as f:
             cfg = yaml.safe_load(f)
 
