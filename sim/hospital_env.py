@@ -7,7 +7,6 @@ class HospitalEnv:
         self,
         num_doctors=1,
         max_queue=50,
-        max_severity=30.0,      # max possible severity
         arrival_rate=0.3,      # 30% chance new patient per timestep
         initial_numbers=5,     # initial patients in queue
         treatment_time_per_doctor=[4],  # list of treatment times
@@ -27,9 +26,6 @@ class HospitalEnv:
 
         # the max amount of patients we can have
         self.max_queue = max_queue
-
-        # the highest severity the patient could come in with
-        self.max_severity = max_severity
 
         # the probability a new patient is spawned per time step
         self.arrival_rate = arrival_rate
@@ -62,7 +58,6 @@ class HospitalEnv:
         """spawn a new patient"""
         new_patient = Patient(
             pid=self.pid_counter,
-            severity=(np.random.rand() * self.max_severity),
             arrival_time=self.curr_time
         )
         self.pid_counter += 1
