@@ -37,4 +37,4 @@ plt.ylabel("Reward")
 plt.xlabel("Step")
 
 plt.tight_layout()
-plt.savefig("results/fifo/fifo_results.png", dpi=300)
+plt.savefig("results/fifo/fifo_results_new.png", dpi=300)
