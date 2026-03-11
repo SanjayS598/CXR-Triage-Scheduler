@@ -8,8 +8,10 @@ environment:
   max_queue: 50
   arrival_rate: 0.3
   initial_numbers: 5
-  treatment_time_per_doctor: [4]
-  positive_reward: 10.0
+  doctor_betas: [2.0]
+  reward_alpha: 2.0
+  reward_t_max: 10.0
+  reward_mu: 1.5
   severity_negative: 0.1
   waiting_negative: 0.05
 
