@@ -1,5 +1,6 @@
 from sim.doctor import Doctor
 from sim.patient import Patient
+from sim.rewards import HospitalRewarder
 import numpy as np
 
 class HospitalEnv:
@@ -10,10 +11,14 @@ class HospitalEnv:
         max_severity=30.0,      # max possible severity
         arrival_rate=0.3,      # 30% chance new patient per timestep
         initial_numbers=5,     # initial patients in queue
-        treatment_time_per_doctor=[4],  # list of treatment times
-        positive_reward = 10.0, # reward for each treated patients
-        severity_negative = 0.1, # for computing negative reward of a waiting patient based on severity
-        waiting_negative = 0.05 # for computing negative reward of a waiting patient based on wait time
+        doctor_betas = [2.0],  # list of treatment times
+
+        reward_alpha=2.0,         # Scales how fast priority increases with wait time
+        reward_t_max=10.0,        # Minimum/Maximum boundary for treatment time
+        reward_mu=1.5,             # Multiplier for the positive treatment rewar
+
+        severity_negative = 0.1, 
+        waiting_negative = 0.05
     ):
 
         # current time
@@ -37,16 +42,19 @@ class HospitalEnv:
         # storing initial number of patients
         self.initial_numbers = initial_numbers
 
-        # reward parameters
-        self.positive_reward = positive_reward
-        self.severity_negative = severity_negative
-        self.waiting_negative = waiting_negative
+        # Initialize the new rewarder math
+        self.rewarder = HospitalRewarder(
+            alpha=reward_alpha, 
+            t_treatment_max=reward_t_max, 
+            mu=reward_mu
+        )
 
         # init the doctors
         self.doctors = []
         for i in range(num_doctors):
-            t = treatment_time_per_doctor[i % len(treatment_time_per_doctor)]
-            self.doctors.append(Doctor(i, treatment_time=t))
+            # Cycles through the list if you have more doctors than beta values
+            b = doctor_betas[i % len(doctor_betas)]
+            self.doctors.append(Doctor(i, beta=b))
 
         # system buffer (queue)
         self.queue = []
@@ -57,12 +65,15 @@ class HospitalEnv:
         # init the initial patients already in line
         for _ in range(initial_numbers):
             self.queue.append(self._spawn_patient())
+
+        self.severity_negative = severity_negative
+        self.waiting_negative = waiting_negative
     
     def _spawn_patient(self):
         """spawn a new patient"""
         new_patient = Patient(
             pid=self.pid_counter,
-            severity=(np.random.rand() * self.max_severity),
+            # severity=(np.random.rand() * self.max_severity),
             arrival_time=self.curr_time
         )
         self.pid_counter += 1
@@ -71,26 +82,27 @@ class HospitalEnv:
     def _assign(self, doctor_idx, patient_idx):
         """assigning a patient to a doctor"""
         doctor = self.doctors[doctor_idx]
-        patient = self.queue[patient_idx]
+        patient = self.queue.pop(patient_idx) 
+
+        # calculate rewards and time
+        pos_reward, t_treat = self.rewarder.get_treatment_reward_and_time(patient, doctor)
 
         # reassigning attr
         doctor.busy = True
         doctor.current_patient = patient
-        doctor.remaining_time = doctor.treatment_time
+        doctor.remaining_time = t_treat
+        doctor.total_treatment_time = t_treat
+        
         patient.state = "treating"
 
-        # pop them off the treatment queue
-        self.queue.pop(patient_idx)
+        return pos_reward
 
     def _treat_step(self, doctor):
         """step function for docotor treating the patient"""
         p = doctor.current_patient
 
         # reduction is based on the initial servity
-        # note, doctor.treatment_time is the number of steps the doctor need to treat the patient
-        # also, doctor remaining time is to show how more steps the doctor need with this patient
-        # this is done for metrics
-        reduction = p.initial_severity / doctor.treatment_time
+        reduction = p.initial_severity / doctor.total_treatment_time
         p.severity = max(0.0, p.severity - reduction)
 
         doctor.remaining_time -= 1
@@ -105,22 +117,7 @@ class HospitalEnv:
         doctor.current_patient = None
         doctor.busy = False
         doctor.remaining_time = 0
-
-    def _reward(self, treated_now):
-        """
-        treated_now: number of patients treated that step
-        """
-
-        # positive reward for treatment
-        reward = 0
-        reward = self.positive_reward * treated_now
-        
-        # negative penalty for waiting patients
-        for p in self.queue:
-            reward -= self.severity_negative * p.severity
-            reward -= self.waiting_negative * p.wait_time
-        
-        return reward
+        doctor.total_treatment_time = 0
 
     def get_state(self):
         """get the current environment state"""
@@ -137,42 +134,39 @@ class HospitalEnv:
         actions: list of (doctor_idx, patient_idx)
         """
         self.curr_time += 1
-        treated_now = 0
+        step_reward = 0 
 
-        # Adding new patient if we can
         if np.random.rand() < self.arrival_rate and len(self.queue) < self.max_queue:
             self.queue.append(self._spawn_patient())
 
-        # increment the wait time for everyone
         for p in self.queue:
             p.wait_time += 1
 
-        # sort actions to avoid queue index issues when popping
         actions = sorted(actions, key=lambda x: x[1], reverse=True)
 
-        # assigning the patients
         for d_idx, p_idx in actions:
-            # just a simple check to make sure the doctor id and the patient id is legit
             if d_idx < len(self.doctors) and p_idx < len(self.queue):
                 if not self.doctors[d_idx].busy:
-                    self._assign(d_idx, p_idx)
+                    step_reward += self._assign(d_idx, p_idx)
 
-        # treatment update
         for d in self.doctors:
             if d.busy:
                 self._treat_step(d)
                 if d.remaining_time <= 0:
                     self._finish_treatment(d)
-                    treated_now += 1
 
-        reward = self._reward(treated_now)
+        step_reward += self.rewarder.get_queue_penalty(self.queue)
+
+        for p in self.queue:
+            step_reward -= (self.severity_negative * p.severity)
+            step_reward -= (self.waiting_negative * p.wait_time)
+
         state = self.get_state()
-        done = False  # continuous environment
+        done = False  
 
-        return state, reward, done
+        return state, step_reward, done
 
     def reset(self):
-        """reset the sim"""
         self.curr_time = 0
         self.pid_counter = 0
         self.queue = []
@@ -181,6 +175,7 @@ class HospitalEnv:
         for d in self.doctors:
             d.busy = False
             d.remaining_time = 0
+            d.total_treatment_time = 0
             d.current_patient = None
 
         for _ in range(self.initial_numbers):
