@@ -4,6 +4,17 @@ simulation:
   num_radiologists: 1
   random_seed: 42
 
+environment:
+  max_queue: 50
+  arrival_rate: 0.3
+  initial_numbers: 5
+  doctor_betas: [2.0]
+  reward_alpha: 2.0
+  reward_t_max: 10.0
+  reward_mu: 1.5
+  severity_negative: 0.1
+  waiting_negative: 0.05
+
 arrivals:
   base_lambda: 0.15
   surge_enabled: true
