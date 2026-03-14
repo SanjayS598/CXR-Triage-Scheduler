@@ -11,10 +11,13 @@ queue_lengths = []
 for t in range(100):
 
     actions = []
-
+    assigned_patients = 0 
     for i, doctor in enumerate(env.doctors):
-        if not doctor.busy and len(env.queue) > 0:
-            actions.append((i, 0))
+        # If doctor is free AND we haven't run out of waiting patients
+        if not doctor.busy and assigned_patients < len(env.queue):
+            # Assign doctor i to the next available patient index
+            actions.append((i, assigned_patients))
+            assigned_patients += 1
 
     state, reward, done = env.step(actions)
 
